@@ -64,21 +64,27 @@ def dependency_sbom(exe_path):
     except Exception:
         pass
     return deps
-# 
+# 리눅스 시스템의 ldd명령어를 사용해 특정 실행 파일이 필요로 하는 공유라이브러리를 찾아냄
+# 찾아낸 각 라이브러리의 경로와 해기 값을 함께 기록
 
+# <빈 목록 생성>
 if __name__ == "__main__":
     sbom = {
         "timestamp": datetime.utcnow().isoformat(),
         "system": []
     }
+# 현재 시간과 프로세스를 담을 빈 목록 생성
 
+# <목록 가져오기>
     for proc in system_sbom():
         exe_sbom = executable_sbom(proc)
         if exe_sbom:
             sbom["system"].append(exe_sbom)
+# system_sbom() 함수로 현재 실행 중인 모든 프로세스 목록을 가져옴
+# 각 프로세스에 대해 executable_sbom() 함수를 호출해 실행 파일과 의존성 정보를 추가로 수집
 
-
+# <JSON파일로 저장>
     with open("runtime-sbom.json", "w") as f:
         json.dump(sbom, f, indent=2)
-
     print("[완료] runtime-sbom.json 파일이 생성되었습니다!")
+# 모든 정보가 담긴 목록을 runtime-sbom.json파일로 저장 (+들여쓰기)
