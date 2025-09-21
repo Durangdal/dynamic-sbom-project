@@ -1,0 +1,53 @@
+# 시스템 프로세스 목록을 CycloneDX 표준을 따르는 SBOM 파일로 변환하는 코드
+# 어떤 소프트웨어나 시스템이 실행 중에 어떤 컴포넌트를 사용하고 있는지에 대한 목록을 표준화된 형식으로 만듦
+# 시스템의 현재 상태를 파악, 실행 중인 애플리케이션의 보안 취약점을 분석하는 데 활용 가능
+
+import json
+from cyclonedx.model.bom import Bom
+from cyclonedx.model.component import Component, ComponentType
+from cyclonedx.output.json import JsonV1Dot5
+
+# <JSON 파일 읽기>
+with open("runtime-sbom.json", "r", encoding="utf-8") as f:
+    runtime_data = json.load(f)
+# runtime-sbom.json이라는 JSON 파일 읽어오기
+# 해당 파일에는 system이라는 키가 존재. 키 안에는 현재 실행 중인 프로세스들의 정보가 들어있음
+#*파일이 실행 스크립트와 같은 폴더에 있어야함
+
+# <BOM 생성>
+bom = Bom()
+# cyclonedx.model.bom.Bom()을 사용하여 새로운 BOM 객체를 만듦
+# 해당 객체가 최종 SBOM의 뼈대
+
+# <컴포넌트 추가>
+for proc in runtime_data["system"]:
+    component = Component(
+        name=proc["name"],
+        version="unknown",
+        purl=None
+    )
+    component.type = ComponentType.APPLICATION
+    component.description = f"Path: {proc['path']}, PID: {proc['pid']}"
+    bom.components.add(component)
+# 불러온 데이터(runtime_data["system"])에 있는 각 프로세스(proc)를 반복해서 처리
+# 각 프로세스 정보를 컴포넌트 객체로 변환
+#name: 프로세스 이름
+#type: ComponentType.APPLICATION으로 지정, 응용 프로그램
+#description: 프로세스의 경로와 PID를 포함하는 설명 추가
+# 이렇게 만들어진 컴포넌트 객체를 bom.components.add()를 사용해 BOM 객체에 추가
+
+# <SBOM JSON 출력>
+outputter = JsonV1Dot5(bom)
+# cyclonedx.output.json.JsonV1Dot5(bom)를 사용해 BOM 객체를 CycloneDX1.5 버전의 JSON 형식으로 변환하는 객체 생성
+
+# <보기 좋게 들여쓰기>
+json_string = outputter.output_as_string()
+parsed = json.loads(json_string)
+pretty_json = json.dumps(parsed, indent=4, ensure_ascii=False)
+# outputter.output_as_string()으로 JSON 문자열을 얻은 후, json.dumps()를 이용해 들여쓰기를 적용(해당 작업은 내용을 정돈되게 정리하는 것)
+
+# <JSON 파일로 저장>
+with open("cyclonedx-runtime-sbom.json", "w", encoding="utf-8") as f:
+    f.write(pretty_json)
+print("[완료] cyclonedx-runtime-sbom.json 파일이 생성되었습니다!")
+# 최종 JSON 데이터를 cyclonedx-runtime-sbom.json 파일로 저장
