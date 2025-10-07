@@ -1,0 +1,106 @@
+import json
+ import random
+ # 1단계: input.json 파일의 내용을 Python 변수(여러 줄 문자열)로 저장합니다.
+ # """ (따옴표 3개)를 사용하면 여러 줄의 텍스트를 그대로 쓸 수 있습니다.
+ json_data_string = """
+ [
+  {
+    "name": "openssl",
+    "version": "1.1.1f",
+    "pid": 1234,
+    "description": "Component running from /usr/lib/openssl",
+    "is_vulnerable": 1,
+    "cvss_score": 7.5
+  },
+  {
+    "name": "malicious_script.sh",
+    "version": "1.0",
+    "pid": null,
+    "description": "Component running from /tmp/exploit.sh",
+    "is_vulnerable": 1,
+    "cvss_score": 9.8
+  },
+  {
+    "name": "libc",
+    "version": "2.31",
+    "pid": 567,
+    "description": "Core library in /usr/bin/libc.so.6",
+    "is_vulnerable": 0,
+    "cvss_score": 0.0
+  },
+  {
+    "name": "nginx",
+    "version": "1.18.0",
+    "pid": 8080,
+    "description": "Web server process in /usr/bin/nginx",
+    "is_vulnerable": 0,
+    "cvss_score": 0.0
+  },
+  {
+    "name": "unknown_agent",
+    "version": "3.2",
+    "pid": 9910,
+    "description": "Unknown agent running from /home/user/downloads/agent",
+    "is_vulnerable": 1,
+    "cvss_score": 5.3
+  }
+ ]
+ """
+ # 2단계: 파일 입출력 부분을 수정한 Python 로직을 함수로 만듭니다.
+ def calculate_trust_features(component_data):
+    """신뢰도 관련 특징과 점수를 계산하는 로직은 동일합니다."""
+    features = {}
+    features['has_pid'] = 1 if component_data.get('pid') else 0
+    description = component_data.get('description', '')
+    features['is_trusted_path'] = 1 if '/usr/lib/' in description or '/usr/bin/' in 
+description else 0
+    features['network_calls'] = component_data.get('network_calls', 
+random.randint(0, 10))
+    features['memory_peak'] = component_data.get('memory_peak', random.random() 
+* 100)
+    
+    trust_score = 1.0
+    if not features['has_pid']:
+        trust_score -= 0.4
+    if not features['is_trusted_path']:
+        trust_score -= 0.5
+    if features['network_calls'] > 8:
+        trust_score -= 0.2
+        
+    features['trust_score'] = max(0.0, trust_score)
+    return features
+def process_data_in_memory(json_string):
+    """
+    JSON 문자열을 직접 입력받아 처리하고, 결과를 리스트로 반환합니다.
+    파일을 읽고 쓰는 대신, 모든 것을 메모리 안에서 처리합니다.
+    """
+    # json.load()는 파일에서 읽을 때, json.loads()는 문자열에서 읽을 때 사용
+    source_data = json.loads(json_string)
+    
+    # 결과를 파일에 쓰는 대신, 리스트에 저장
+    training_data_list = []
+    
+    for component in source_data:
+        trust_features = calculate_trust_features(component)
+        final_features = {
+            **trust_features,
+            'cvss_score': component.get('cvss_score', 0.0)
+        }
+        label = component.get('is_vulnerable', 0)
+        training_sample = {
+            "features": final_features,
+            "label": label
+        }
+        # 리스트에 JSON 객체(딕셔너리)를 추가
+        training_data_list.append(training_sample)
+        
+    return training_data_list
+ # 3단계: 위에서 정의한 데이터와 함수를 실행하고 결과를 출력합니다.
+ print("메모리 내에서 데이터 처리를 시작합니다...")
+ # 함수에 JSON 데이터를 담은 문자열 변수를 전달
+processed_results = process_data_in_memory(json_data_string)
+ # 결과 확인
+for item in processed_results:
+    # 보기 좋게 출력하기 위해 다시 JSON 문자열로 변환
+    print(json.dumps(item, ensure_ascii=False))
+ print(f"\n총 {len(processed_results)}개의 데이터 처리를 완료했습니다.")
